@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <title>Incoming Call</title>
+  <title>LoudLinkVoice Call</title>
+
+  <script src="https://sdk.twilio.com/js/client/v1.13/twilio.min.js"></script>
+
   <style>
     body {
       font-family: Arial;
@@ -12,6 +16,7 @@
       align-items: center;
       height: 100vh;
     }
+
     .box {
       background: white;
       color: black;
@@ -19,15 +24,18 @@
       border-radius: 10px;
       text-align: center;
     }
+
     button {
       padding: 10px 20px;
       margin: 10px;
       border: none;
       color: white;
     }
+
     .answer {
       background: green;
     }
+
     .decline {
       background: red;
     }
@@ -36,13 +44,65 @@
 
 <body>
 
-<div class="box">
-  <h2>📞 Incoming Call</h2>
-  <p>Caller: +1 XXX XXX XXXX</p>
+  <div class="box">
+    <h2>📞 LoudLinkVoice Phone</h2>
+    <p id="status">Connecting...</p>
 
-  <button class="answer">Answer</button>
-  <button class="decline">Decline</button>
-</div>
+    <button class="answer" onclick="answerCall()">Answer</button>
+    <button class="decline" onclick="hangUp()">Hang Up</button>
+  </div>
+
+  <script>
+    let device;
+    let activeConnection = null;
+
+    async function start() {
+      const res = await fetch('/api/token');
+      const data = await res.json();
+
+      device = new Twilio.Device(data.token, {
+        debug: true
+      });
+
+      device.on('ready', function () {
+        document.getElementById("status").innerText = "Ready for calls";
+      });
+
+      device.on('incoming', function (conn) {
+        activeConnection = conn;
+        document.getElementById("status").innerText = "Incoming call...";
+      });
+
+      device.on('connect', function (conn) {
+        activeConnection = conn;
+        document.getElementById("status").innerText = "On call";
+      });
+
+      device.on('disconnect', function () {
+        activeConnection = null;
+        document.getElementById("status").innerText = "Call ended";
+      });
+
+      device.on('error', function (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "Error: " + err.message;
+      });
+    }
+
+    function answerCall() {
+      if (activeConnection) {
+        activeConnection.accept();
+      }
+    }
+
+    function hangUp() {
+      if (activeConnection) {
+        activeConnection.disconnect();
+      }
+    }
+
+    start();
+  </script>
 
 </body>
 </html>
